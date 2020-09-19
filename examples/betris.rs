@@ -5,6 +5,7 @@ use bevy::{
     render::pass::ClearColor,
     sprite::collide_aabb::{collide, Collision},
 };
+use rand::prelude::*;
 
 /// An implementation of the classic game "Breakout"
 fn main() {
@@ -269,7 +270,7 @@ fn get_color(t: &PieceType) -> usize {
         PieceType::S => 5,
         PieceType::Z => 6,
         PieceType::O => 7,
-        PieceType::T => 0,
+        PieceType::T => 8,
     }
 }
 
@@ -284,6 +285,7 @@ impl FieldMaterials {
             Color::rgb(1.0, 1.0, 0.0),
             Color::rgb(0.0, 1.0, 1.0),
             Color::rgb(1.0, 0.0, 1.0),
+            Color::rgb(1.0, 0.5, 0.5),
         ];
 
         FieldMaterials {
@@ -476,7 +478,10 @@ impl PieceBag {
                 PieceType::S,
                 PieceType::Z,
                 PieceType::O,
+                PieceType::T,
             ];
+
+            self.bag.shuffle(&mut rand::thread_rng());
         }
         self.bag.pop().unwrap()
     }
