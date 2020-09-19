@@ -15,6 +15,7 @@ fn main() {
         .add_resource(ClearColor(Color::rgb(0.7, 0.7, 0.7)))
         .add_resource(State {
             timer: Timer::new(std::time::Duration::from_millis(250), true),
+            fast_timer: Timer::new(std::time::Duration::from_millis(50), true),
             ..Default::default()
         })
         .init_resource::<PieceBag>()
@@ -62,36 +63,6 @@ fn setup(
     let wall_material = materials.add(Color::rgb(0.5, 0.5, 0.5).into());
     let wall_thickness = 10.0;
     let bounds = Vec2::new(900.0, 600.0);
-
-    commands
-        // left
-        .spawn(SpriteComponents {
-            material: wall_material,
-            transform: Transform::from_translation(Vec3::new(-bounds.x() / 2.0, 0.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(wall_thickness, bounds.y() + wall_thickness)),
-            ..Default::default()
-        })
-        // right
-        .spawn(SpriteComponents {
-            material: wall_material,
-            transform: Transform::from_translation(Vec3::new(bounds.x() / 2.0, 0.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(wall_thickness, bounds.y() + wall_thickness)),
-            ..Default::default()
-        })
-        // bottom
-        .spawn(SpriteComponents {
-            material: wall_material,
-            transform: Transform::from_translation(Vec3::new(0.0, -bounds.y() / 2.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(bounds.x() + wall_thickness, wall_thickness)),
-            ..Default::default()
-        })
-        // top
-        .spawn(SpriteComponents {
-            material: wall_material,
-            transform: Transform::from_translation(Vec3::new(0.0, bounds.y() / 2.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(bounds.x() + wall_thickness, wall_thickness)),
-            ..Default::default()
-        });
 }
 
 struct Scoreboard {
@@ -357,9 +328,11 @@ fn piece_update_system(
     mut state: ResMut<State>,
     mut piece_bag: ResMut<PieceBag>,
     keyboard_input_events: Res<Events<KeyboardInput>>,
+    keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(Entity, &PieceType, &mut Piece)>,
 ) {
     state.timer.tick(time.delta_seconds);
+    state.fast_timer.tick(time.delta_seconds);
     for (ent, t, mut p) in &mut query.iter() {
         // delete old pos
         for (x, y) in get_solid(t, &*p).iter() {
@@ -384,7 +357,12 @@ fn piece_update_system(
             }
         }
 
-        if state.timer.finished {
+        let fast_move = keyboard_input.pressed(KeyCode::LShift);
+        let do_move =
+            (!fast_move && state.timer.finished) || (fast_move && state.fast_timer.finished);
+        state.timer.finished = false;
+        state.fast_timer.finished = false;
+        if do_move {
             pnew.y -= 1;
             state.timer.finished = false;
         }
@@ -462,6 +440,7 @@ struct BetrisPlugin;
 struct State {
     event_reader: EventReader<KeyboardInput>,
     timer: Timer,
+    fast_timer: Timer,
 }
 #[derive(Default)]
 struct PieceBag {
