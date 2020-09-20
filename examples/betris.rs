@@ -154,18 +154,18 @@ fn get_solid(t: &PieceType, p: &Piece) -> [(i32, i32); 4] {
                          ooo.\n\
                          ....\n\
                          ....\n\
-                         .oo.\n\
-                         ..o.\n\
-                         ..o.\n\
+                         oo..\n\
+                         .o..\n\
+                         .o..\n\
                          ....";
 
     let piece_j = "....\n\
                          ooo.\n\
                          ..o.\n\
                          ....\n\
-                         ..o.\n\
-                         ..o.\n\
-                         .oo.\n\
+                         .o..\n\
+                         .o..\n\
+                         oo..\n\
                          ....\n\
                          o...\n\
                          ooo.\n\
@@ -176,18 +176,18 @@ fn get_solid(t: &PieceType, p: &Piece) -> [(i32, i32); 4] {
                          .o..\n\
                          ....";
 
-    let piece_s = ".oo.\n\
+    let piece_s = "....\n\
+                         .oo.\n\
                          oo..\n\
-                         ....\n\
                          ....\n\
                          o...\n\
                          oo..\n\
                          .o..\n\
                          ....";
 
-    let piece_z = "oo..\n\
+    let piece_z = "....\n\
+                         oo..\n\
                          .oo.\n\
-                         ....\n\
                          ....\n\
                          .o..\n\
                          oo..\n\
@@ -199,9 +199,9 @@ fn get_solid(t: &PieceType, p: &Piece) -> [(i32, i32); 4] {
                          .oo.\n\
                          ....";
 
-    let piece_t = "ooo.\n\
+    let piece_t = "....\n\
+                         ooo.\n\
                          .o..\n\
-                         ....\n\
                          ....\n\
                          .o..\n\
                          oo..\n\
@@ -321,6 +321,18 @@ fn modify_test(mut playfield: ResMut<Playfield>) {
         .for_each(|rows| rows.iter_mut().for_each(|f| *f = rand::random::<u8>() % 8));
 }
 
+// fn player_input_system(
+//     mut commands: Commands,
+//     time: Res<Time>,
+//     mut playfield: ResMut<Playfield>,
+//     mut state: ResMut<State>,
+//     mut piece_bag: ResMut<PieceBag>,
+//     keyboard_input_events: Res<Events<KeyboardInput>>,
+//     keyboard_input: Res<Input<KeyCode>>,
+//     mut query: Query<(Entity, &PieceType, &mut Piece)>,
+// ) {
+// }
+
 fn piece_update_system(
     mut commands: Commands,
     time: Res<Time>,
@@ -357,7 +369,31 @@ fn piece_update_system(
             }
         }
 
-        let fast_move = keyboard_input.pressed(KeyCode::LShift);
+        let illegal_user_move = get_solid(&t, &pnew)
+            .iter()
+            .map(|(x, y)| {
+                *x < 0
+                    || *x >= 10
+                    || *y < 0
+                    || *y >= 22
+                    || playfield.field[*y as usize][*x as usize] != 0
+            })
+            .any(|x| x);
+
+        if illegal_user_move {
+            pnew = p.clone(); // undo user input
+        }
+
+        let fast_move = if keyboard_input.pressed(KeyCode::Down) {
+            if state.fast_generation.is_none() {
+                state.fast_generation = Some(ent);
+            }
+            state.fast_generation == Some(ent)
+        } else {
+            state.fast_generation = None;
+            false
+        };
+
         let do_move =
             (!fast_move && state.timer.finished) || (fast_move && state.fast_timer.finished);
         state.timer.finished = false;
@@ -367,20 +403,13 @@ fn piece_update_system(
             state.timer.finished = false;
         }
 
-        let out_of_bounds = get_solid(&t, &pnew)
-            .iter()
-            .map(|(x, y)| *x < 0 || *x >= 10 || *y < 0 || *y >= 22)
-            .any(|x| x);
-
         let on_ground = get_solid(&t, &pnew)
             .iter()
-            .map(|(x, y)| {
-                *y < 0 || (!out_of_bounds && playfield.field[*y as usize][*x as usize] != 0)
-            })
+            .map(|(x, y)| *y < 0 || playfield.field[*y as usize][*x as usize] != 0)
             .any(|x| x);
 
         // draw new pos
-        if !out_of_bounds && !on_ground {
+        if !on_ground {
             *p = pnew;
         }
 
@@ -441,6 +470,7 @@ struct State {
     event_reader: EventReader<KeyboardInput>,
     timer: Timer,
     fast_timer: Timer,
+    fast_generation: Option<Entity>,
 }
 #[derive(Default)]
 struct PieceBag {
