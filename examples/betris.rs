@@ -321,19 +321,7 @@ fn modify_test(mut playfield: ResMut<Playfield>) {
         .for_each(|rows| rows.iter_mut().for_each(|f| *f = rand::random::<u8>() % 8));
 }
 
-// fn player_input_system(
-//     mut commands: Commands,
-//     time: Res<Time>,
-//     mut playfield: ResMut<Playfield>,
-//     mut state: ResMut<State>,
-//     mut piece_bag: ResMut<PieceBag>,
-//     keyboard_input_events: Res<Events<KeyboardInput>>,
-//     keyboard_input: Res<Input<KeyCode>>,
-//     mut query: Query<(Entity, &PieceType, &mut Piece)>,
-// ) {
-// }
-
-fn piece_update_system(
+fn player_input_system(
     mut commands: Commands,
     time: Res<Time>,
     mut playfield: ResMut<Playfield>,
@@ -343,8 +331,6 @@ fn piece_update_system(
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(Entity, &PieceType, &mut Piece)>,
 ) {
-    state.timer.tick(time.delta_seconds);
-    state.fast_timer.tick(time.delta_seconds);
     for (ent, t, mut p) in &mut query.iter() {
         // delete old pos
         for (x, y) in get_solid(t, &*p).iter() {
@@ -380,10 +366,25 @@ fn piece_update_system(
             })
             .any(|x| x);
 
-        if illegal_user_move {
-            pnew = p.clone(); // undo user input
+        if !illegal_user_move {
+            *p = pnew;
         }
+    }
+}
 
+fn piece_update_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut playfield: ResMut<Playfield>,
+    mut state: ResMut<State>,
+    mut piece_bag: ResMut<PieceBag>,
+    keyboard_input_events: Res<Events<KeyboardInput>>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<(Entity, &PieceType, &mut Piece)>,
+) {
+    state.timer.tick(time.delta_seconds);
+    state.fast_timer.tick(time.delta_seconds);
+    for (ent, t, mut p) in &mut query.iter() {
         let fast_move = if keyboard_input.pressed(KeyCode::Down) {
             if state.fast_generation.is_none() {
                 state.fast_generation = Some(ent);
@@ -394,6 +395,7 @@ fn piece_update_system(
             false
         };
 
+        let mut pnew = p.clone();
         let do_move =
             (!fast_move && state.timer.finished) || (fast_move && state.fast_timer.finished);
         state.timer.finished = false;
@@ -501,6 +503,7 @@ impl Plugin for BetrisPlugin {
         app.add_startup_system(init_field.system())
             .add_resource(Playfield::new())
             // .add_system(modify_test.system())
+            .add_system(player_input_system.system())
             .add_system(piece_update_system.system())
             // .add_system(check_lines_system.system())
             .add_system(field_update_system.system());
