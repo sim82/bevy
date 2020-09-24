@@ -51,8 +51,9 @@ impl FontAtlasSet {
         textures: &mut Assets<Texture>,
         font_size: f32,
         text: &str,
-    ) -> f32 {
-        let font = fonts.get(&self.font).unwrap();
+    ) -> Option<f32> {
+        let mut width = 0.0;
+        let font = fonts.get(&self.font)?;
         let scaled_font = ab_glyph::Font::as_scaled(&font.font, font_size);
         let font_atlases = self
             .font_atlases
@@ -66,7 +67,6 @@ impl FontAtlasSet {
             });
 
         let mut last_glyph: Option<Glyph> = None;
-        let mut width = 0.0;
         for character in text.chars() {
             if character.is_control() {
                 continue;
@@ -105,7 +105,7 @@ impl FontAtlasSet {
             last_glyph = Some(glyph);
         }
 
-        width
+        Some(width)
     }
 
     pub fn get_glyph_atlas_info(&self, font_size: f32, character: char) -> Option<GlyphAtlasInfo> {
