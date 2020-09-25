@@ -9,7 +9,7 @@ use bevy::{
         shader::{ShaderStage, ShaderStages},
     },
 };
-
+mod crystal;
 use rand::{thread_rng, Rng};
 /// This example illustrates how to create a custom material asset and a shader that uses that material
 fn main() {
@@ -208,16 +208,14 @@ fn setup(
 
 fn blink_system(
     mut materials: ResMut<Assets<MyMaterial>>,
-    mut query: Query<(&mut Handle<MyMaterial>)>,
+    material_handle: Mut<Handle<MyMaterial>>,
 ) {
-    println!("blink");
-    for (mut material_handle) in &mut query.iter() {
-        let material = materials.get_mut(&material_handle).unwrap();
-        material.color.r = thread_rng().gen::<f32>();
-        material.color.g = thread_rng().gen::<f32>();
-        material.color.b = thread_rng().gen::<f32>();
-        println!("update {:?}", material.color);
-    }
+    // println!("blink");
+    let material = materials.get_mut(&material_handle).unwrap();
+    material.color.r = thread_rng().gen::<f32>();
+    material.color.g = thread_rng().gen::<f32>();
+    material.color.b = thread_rng().gen::<f32>();
+    // println!("update {:?}", material.color);
 }
 
 pub struct FlyCamera {
