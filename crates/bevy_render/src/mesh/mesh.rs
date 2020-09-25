@@ -259,6 +259,7 @@ pub mod shape {
     }
 
     /// A rectangle on the XY plane.
+    #[derive(Clone)]
     pub struct Quad {
         /// Full width and height of the rectangle.
         pub size: Vec2,
@@ -371,6 +372,47 @@ pub mod shape {
                 ([extent, 0.0, extent], [0.0, 1.0, 0.0], [1.0, 0.0]),
                 ([-extent, 0.0, extent], [0.0, 1.0, 0.0], [0.0, 0.0]),
                 ([-extent, 0.0, -extent], [0.0, 1.0, 0.0], [0.0, 1.0]),
+            ];
+
+            let indices = vec![0, 2, 1, 0, 3, 2];
+
+            let mut positions = Vec::new();
+            let mut normals = Vec::new();
+            let mut uvs = Vec::new();
+            for (position, normal, uv) in vertices.iter() {
+                positions.push(*position);
+                normals.push(*normal);
+                uvs.push(*uv);
+            }
+
+            Mesh {
+                primitive_topology: PrimitiveTopology::TriangleList,
+                attributes: vec![
+                    VertexAttribute::position(positions),
+                    VertexAttribute::normal(normals),
+                    VertexAttribute::uv(uvs),
+                ],
+                indices: Some(indices),
+            }
+        }
+    }
+
+    /// A square on the XZ plane.
+    #[derive(Clone)]
+    pub struct PlaneXy {
+        /// The total side length of the square.
+        pub size: f32,
+    }
+
+    impl From<PlaneXy> for Mesh {
+        fn from(plane: PlaneXy) -> Self {
+            let extent = plane.size; // / 2.0;
+
+            let vertices = [
+                ([-extent, -extent, 0.0], [0.0, 0.0, 1.0], [1.0, 1.0]),
+                ([extent, -extent, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0]),
+                ([extent, extent, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0]),
+                ([-extent, extent, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0]),
             ];
 
             let indices = vec![0, 2, 1, 0, 3, 2];
