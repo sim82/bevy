@@ -245,6 +245,10 @@ name = "quads"
 path = "examples/shader/quads.rs"
 
 [[example]]
+name = "quads_boring"
+path = "examples/shader/quads_boring.rs"
+
+[[example]]
 name = "shader_defs"
 path = "examples/shader/shader_defs.rs"
 

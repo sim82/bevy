@@ -501,8 +501,8 @@ pub fn read_map<P: AsRef<Path>>(filename: P) -> std::io::Result<BlockMap> {
     slice.print();
 
     // pump disabled!
-    // let slice = slice.pumped().pumped();
-    let slice = slice.pumped();
+    let slice = slice.pumped().pumped();
+    // let slice = slice.pumped();
     let max = slice.max();
     let real_size = slice.size();
 
