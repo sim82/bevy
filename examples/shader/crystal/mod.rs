@@ -23,7 +23,7 @@
 // use std::iter::Iterator;
 
 // mod buffer;
-mod map;
+pub mod map;
 // mod scene;
 
 // pub use buffer::{aligned_vector_init, MutRadSlice, RadBuffer, RadSlice};

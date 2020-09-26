@@ -10,6 +10,7 @@ use bevy::{
     },
 };
 mod crystal;
+use crystal::map::Vec3i;
 use rand::{thread_rng, Rng};
 /// This example illustrates how to create a custom material asset and a shader that uses that material
 fn main() {
@@ -18,7 +19,7 @@ fn main() {
         .add_plugin(FlyCameraPlugin)
         .add_asset::<MyMaterial>()
         .add_startup_system(setup.system())
-        .add_system(blink_system.system())
+        // .add_system(blink_system.system())
         .run();
 }
 
@@ -26,6 +27,7 @@ fn main() {
 struct MyMaterial {
     pub color: Color,
     pub direction: u32,
+    pub translate: Vec3,
 }
 
 const VERTEX_SHADER: &str = r#"
@@ -43,6 +45,9 @@ layout(set = 1, binding = 1) uniform MyMaterial_color {
 layout(set = 1, binding = 2) uniform MyMaterial_direction {
     uint direction;
 };    
+layout(set = 1, binding = 3) uniform MyMaterial_translate {
+    vec3 translate;
+};    
 void main() {
     mat4 modelx0 = mat4(0.125, 0.0, 0.0, 0.0, 0.0, 0.125, 0.0, 0.0, 0.0, 0.0, 0.125, 0.0, 0.0, 0.0, 0.125, 1.0);
     mat4 modelx1 = mat4(-0.125, 0.0, 0.0, 0.0, 0.0, 0.125, 0.0, 0.0, 0.0, 0.0, -0.125, 0.0, 0.0, 0.0, -0.125, 1.0);
@@ -51,7 +56,9 @@ void main() {
     mat4 modelx4 = mat4(-0.125, 0.0, 0.0, 0.0, 0.0, 0.0, 0.125, 0.0, 0.0, 0.125, 0.0, 0.0, 0.0, 0.125, 0.0, 1.0);
     mat4 modelx5 = mat4(-0.125, -0.0, 0.0, 0.0, 0.0, 0.0, -0.125, 0.0, 0.0, -0.125, 0.0, 0.0, 0.0, -0.125, 0.0, 1.0);
     mat4 modelx[6] = mat4[6](modelx0, modelx1, modelx2, modelx3, modelx4, modelx5);
-    gl_Position = ViewProj * Model * modelx[direction] * vec4(Vertex_Position, 1.0);
+    mat4 trans_mat = mat4(1.0);
+    trans_mat[3] = vec4(translate, 1.0);
+    gl_Position = ViewProj * Model * trans_mat * modelx[direction] * vec4(Vertex_Position, 1.0);
 }
 "#;
 
@@ -95,29 +102,35 @@ fn setup(
     let material0 = materials.add(MyMaterial {
         color: Color::rgb(1.0, 0.0, 0.0),
         direction: 0,
+        translate: Vec3::zero(),
     });
 
     let material1 = materials.add(MyMaterial {
         color: Color::rgb(0.0, 1.0, 0.0),
         direction: 2,
+        translate: Vec3::zero(),
     });
     let material2 = materials.add(MyMaterial {
         color: Color::rgb(0.0, 0.0, 1.0),
         direction: 4,
+        translate: Vec3::zero(),
     });
 
     let material3 = materials.add(MyMaterial {
         color: Color::rgb(1.0, 1.0, 0.0),
         direction: 1,
+        translate: Vec3::zero(),
     });
 
     let material4 = materials.add(MyMaterial {
         color: Color::rgb(0.0, 1.0, 1.0),
-        direction: 2,
+        direction: 3,
+        translate: Vec3::zero(),
     });
     let material5 = materials.add(MyMaterial {
         color: Color::rgb(1.0, 0.0, 1.0),
-        direction: 3,
+        direction: 5,
+        translate: Vec3::zero(),
     });
 
     let pipelines = RenderPipelines::from_pipelines(vec![RenderPipeline::specialized(
@@ -139,6 +152,11 @@ fn setup(
                 DynamicBinding {
                     bind_group: 1,
                     binding: 2,
+                },
+                // MyMaterial_translate
+                DynamicBinding {
+                    bind_group: 1,
+                    binding: 3,
                 },
             ],
             ..Default::default()
@@ -197,13 +215,61 @@ fn setup(
         // camera
         .spawn(Camera3dComponents {
             transform: Transform::new(Mat4::face_toward(
-                Vec3::new(3.0, 5.0, -8.0),
-                Vec3::new(0.0, 0.0, 0.0),
+                Vec3::new(5.0, 5.0, 20.0),
+                Vec3::new(5.0, 5.0, 0.0),
                 Vec3::new(0.0, 1.0, 0.0),
             )),
             ..Default::default()
         })
         .with(FlyCamera::default());
+
+    let bm = crystal::read_map("assets/maps/hidden_ramp.txt").expect("could not read file");
+    let mut planes = crystal::PlanesSep::new();
+    planes.create_planes(&bm);
+
+    for (i, p) in planes.planes_iter().cloned().enumerate() {
+        let point = &p.cell;
+        let dir = match p.dir {
+            crystal::Dir::ZxPos => 4,
+            crystal::Dir::ZxNeg => 5,
+            crystal::Dir::YzPos => 2,
+            crystal::Dir::YzNeg => 3,
+            crystal::Dir::XyPos => 0,
+            crystal::Dir::XyNeg => 1,
+        };
+        println!("spawn");
+        commands
+            .spawn(MeshComponents {
+                mesh: meshes.add(Mesh::from(shape::Quad {
+                    size: Vec2::new(2.0, 2.0),
+                    flip: false,
+                })),
+                render_pipelines: pipelines.clone(),
+                // transform: Transform::from_translation(point.into_vec3() * 0.25),
+                ..Default::default()
+            })
+            // .with(match dir {
+            //     0 => material0,
+            //     2 => material1,
+            //     4 => material2,
+            //     1 => material3,
+            //     3 => material4,
+            //     5 => material5,
+            //     _ => panic!("unhandled dir"),
+            // })
+            .with(materials.add(MyMaterial {
+                color: match p.dir {
+                    crystal::Dir::ZxPos => Color::rgb(0.0, 0.0, 1.0),
+                    crystal::Dir::ZxNeg => Color::rgb(0.0, 1.0, 1.0),
+                    crystal::Dir::YzPos => Color::rgb(0.0, 1.0, 0.0),
+                    crystal::Dir::YzNeg => Color::rgb(0.0, 1.0, 1.0),
+                    crystal::Dir::XyPos => Color::rgb(1.0, 0.0, 0.0),
+                    crystal::Dir::XyNeg => Color::rgb(1.0, 1.0, 0.0),
+                },
+                direction: dir,
+                translate: point.into_vec3() * 0.25,
+            }));
+    }
 }
 
 fn blink_system(
@@ -349,8 +415,12 @@ fn mouse_motion_system(
     time: Res<Time>,
     mut state: ResMut<State>,
     mouse_motion_events: Res<Events<MouseMotion>>,
+    mouse_button_input: Res<Input<MouseButton>>,
     mut query: Query<(&mut FlyCamera, &mut Transform)>,
 ) {
+    if !mouse_button_input.pressed(MouseButton::Left) {
+        return;
+    }
     let mut delta: Vec2 = Vec2::zero();
     for event in state.mouse_motion_event_reader.iter(&mouse_motion_events) {
         delta += event.delta;
@@ -369,7 +439,7 @@ fn mouse_motion_system(
         if options.pitch < -89.9 {
             options.pitch = -89.9;
         }
-        // println!("pitch: {}, yaw: {}", options.pitch, options.yaw);
+        println!("pitch: {}, yaw: {}", options.pitch, options.yaw);
 
         let yaw_radians = options.yaw.to_radians();
         let pitch_radians = options.pitch.to_radians();

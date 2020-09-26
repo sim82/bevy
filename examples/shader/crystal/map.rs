@@ -13,19 +13,23 @@ pub struct Vec3i(pub i32, pub i32, pub i32);
 pub type Point3i = Vec3i;
 
 impl Vec3i {
-    fn new(x: i32, y: i32, z: i32) -> Vec3i {
+    pub fn new(x: i32, y: i32, z: i32) -> Vec3i {
         Vec3i(x, y, z)
     }
 
-    fn x(&self) -> i32 {
+    pub fn into_vec3(self) -> Vec3 {
+        Vec3::new(self.0 as f32, self.1 as f32, self.2 as f32)
+    }
+
+    pub fn x(&self) -> i32 {
         self.0
     }
 
-    fn y(&self) -> i32 {
+    pub fn y(&self) -> i32 {
         self.1
     }
 
-    fn z(&self) -> i32 {
+    pub fn z(&self) -> i32 {
         self.2
     }
 }
@@ -44,15 +48,15 @@ pub struct Vec2i(pub i32, pub i32);
 pub type Point2i = Vec2i;
 
 impl Vec2i {
-    fn new(x: i32, y: i32) -> Vec2i {
+    pub fn new(x: i32, y: i32) -> Vec2i {
         Vec2i(x, y)
     }
 
-    fn x(&self) -> i32 {
+    pub fn x(&self) -> i32 {
         self.0
     }
 
-    fn y(&self) -> i32 {
+    pub fn y(&self) -> i32 {
         self.1
     }
 }
@@ -496,7 +500,9 @@ pub fn read_map<P: AsRef<Path>>(filename: P) -> std::io::Result<BlockMap> {
     let slice = read_map_slice(&mut reader, Vec2i::new(width, height))?;
     slice.print();
 
-    let slice = slice.pumped().pumped();
+    // pump disabled!
+    // let slice = slice.pumped().pumped();
+    let slice = slice.pumped();
     let max = slice.max();
     let real_size = slice.size();
 
