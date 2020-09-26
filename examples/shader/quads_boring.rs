@@ -1,4 +1,5 @@
 use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin},
     input::mouse::MouseMotion,
     prelude::*,
     render::{
@@ -15,6 +16,8 @@ use rand::{thread_rng, Rng};
 fn main() {
     App::build()
         .add_default_plugins()
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(PrintDiagnosticsPlugin::default())
         .add_plugin(FlyCameraPlugin)
         .add_asset::<MyMaterial>()
         .add_startup_system(setup.system())
